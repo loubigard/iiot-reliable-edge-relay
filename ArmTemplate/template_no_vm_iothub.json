@@ -1,0 +1,825 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "virtualMachines_edge_vm_name": {
+      "defaultValue": "edge-vm",
+      "type": "String"
+    },
+    "virtualMachines_edge_vm_username": {
+      "defaultValue": "edgeuser",
+      "type": "String"
+    },
+    "virtualMachines_edge_vm_password": {
+      "defaultValue": "Edgeuser4ever",
+      "type": "SecureString"
+    },
+    "servers_iiot_edge_relay_sql_name": {
+      "defaultValue": "iiot-edge-relay-sql",
+      "type": "String"
+    },
+    "servers_iiot_edge_relay_sql_username": {
+      "defaultValue": "user",
+      "type": "String"
+    },
+    "servers_iiot_edge_relay_sql_password": {
+      "defaultValue": "Sql4ever",
+      "type": "SecureString"
+    },
+    "networkInterfaces_edge_vm758_name": {
+      "defaultValue": "edge-vm758",
+      "type": "String"
+    },
+    "publicIPAddresses_edge_vm_ip_name": {
+      "defaultValue": "edge-vm-ip",
+      "type": "String"
+    },
+    "sites_iiot_edge_relay_function_name": {
+      "defaultValue": "iiot-edge-relay-function",
+      "type": "String"
+    },
+    "networkSecurityGroups_edge_vm_nsg_name": {
+      "defaultValue": "iiot-edge-vm-nsg",
+      "type": "String"
+    },
+    "serverfarms_ASP_iiotedgerelay_9228_name": {
+      "defaultValue": "ASP-iiotedgerelay-9228",
+      "type": "String"
+    },
+    "IotHubs_iiot_edge_relay_iot_hub_name": {
+      "defaultValue": "khi-tests",
+      "type": "String"
+    },
+    "namespaces_iiot_edge_relay_hub_name": {
+      "defaultValue": "iiot-edge-relay-hub",
+      "type": "String"
+    },
+    "streamingjobs_ingestion_job_name": {
+      "defaultValue": "iiot-ingestion-job",
+      "type": "String"
+    },
+    "storageAccounts_iiotedgerelaydiag_name": {
+      "defaultValue": "iiotedgerelaydiag",
+      "type": "String"
+    },
+    "virtualNetworks_iiot_edge_relay_vnet_name": {
+      "defaultValue": "iiot-edge-relay-vnet",
+      "type": "String"
+    },
+    "storageAccounts_iiotedgerelaystorage_name": {
+      "defaultValue": "iiotedgerelaystorage",
+      "type": "String"
+    },
+    "components_iiot_edge_relay_app_insights_name": {
+      "defaultValue": "iiot-edge-relay-app-insights",
+      "type": "String"
+    },
+    "workspaces_iiot_edge_relay_log_analytics_name": {
+      "defaultValue": "iiot-edge-relay-log-analytics",
+      "type": "String"
+    },
+    "smartdetectoralertrules_failure_anomalies___iiot_edge_relay_app_insights_name": {
+      "defaultValue": "failure anomalies - iiot-edge-relay-app-insights",
+      "type": "String"
+    },
+    "actiongroups_application_20insights_20smart_20detection_externalid": {
+      "defaultValue": "/subscriptions/33950585-22f0-4aef-915f-880503d43adb/resourceGroups/ml-rg/providers/microsoft.insights/actiongroups/application%20insights%20smart%20detection",
+      "type": "String"
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]"
+  },
+  "resources": [
+
+    {
+      "type": "Microsoft.EventHub/namespaces",
+      "apiVersion": "2018-01-01-preview",
+      "name": "[parameters('namespaces_iiot_edge_relay_hub_name')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard",
+        "capacity": 1
+      },
+      "properties": {
+        "zoneRedundant": false,
+        "isAutoInflateEnabled": true,
+        "maximumThroughputUnits": 4,
+        "kafkaEnabled": true
+      }
+    },
+    {
+      "type": "microsoft.insights/components",
+      "apiVersion": "2015-05-01",
+      "name": "[parameters('components_iiot_edge_relay_app_insights_name')]",
+      "location": "[variables('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "Request_Source": "IbizaWebAppExtensionCreate"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2019-09-01",
+      "name": "[parameters('virtualNetworks_iiot_edge_relay_vnet_name')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.1.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "delegations": [],
+              "privateEndpointNetworkPolicies": "Enabled",
+              "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+          }
+        ],
+        "virtualNetworkPeerings": [],
+        "enableDdosProtection": false,
+        "enableVmProtection": false
+      }
+    },
+    {
+      "type": "microsoft.operationalinsights/workspaces",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[parameters('workspaces_iiot_edge_relay_log_analytics_name')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "sku": {
+          "name": "pergb2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2015-05-01-preview",
+      "name": "[parameters('servers_iiot_edge_relay_sql_name')]",
+      "location": "[variables('location')]",
+      "kind": "v12.0",
+      "properties": {
+        "administratorLogin": "[parameters('servers_iiot_edge_relay_sql_username')]",
+        "administratorLoginPassword": "[parameters('servers_iiot_edge_relay_sql_password')]",
+        "version": "12.0"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2015-05-01-preview",
+      "name": "[concat(parameters('servers_iiot_edge_relay_sql_name'), '/AllowAllWindowsAzureIps')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('servers_iiot_edge_relay_sql_name'))]"
+      ],
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2017-10-01-preview",
+      "name": "[concat(parameters('servers_iiot_edge_relay_sql_name'), '/IngressMetadata')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('servers_iiot_edge_relay_sql_name'))]"
+      ],
+      "sku": {
+        "name": "GP_Gen5",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 2
+      },
+      "kind": "v12.0,user,vcore",
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 34359738368,
+        "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+        "zoneRedundant": false,
+        "licenseType": "LicenseIncluded",
+        "readScale": "Disabled",
+        "readReplicaCount": 0
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[parameters('storageAccounts_iiotedgerelaystorage_name')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.StreamAnalytics/streamingjobs",
+      "apiVersion": "2016-03-01",
+      "name": "[parameters('streamingjobs_ingestion_job_name')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'processing-data-gaps')]",
+        "[resourceId('Microsoft.Sql/servers/databases', parameters('servers_iiot_edge_relay_sql_name'), 'IngressMetadata')]",
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'detected-data-gaps')]",
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'ingress-metadata')]",
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'processing-data-gaps')]"
+      ],
+      "properties": {
+        "sku": {
+          "name": "Standard"
+        },
+        "outputStartMode": "JobStartTime",
+        "eventsOutOfOrderPolicy": "Adjust",
+        "outputErrorPolicy": "Stop",
+        "eventsOutOfOrderMaxDelayInSeconds": 0,
+        "eventsLateArrivalMaxDelayInSeconds": 5,
+        "dataLocale": "en-US",
+        "compatibilityLevel": "1.1",
+        "inputs": [
+          {
+            "name": "iot-hub",
+            "properties": {
+              "type": "Stream",
+              "datasource": {
+                "type": "Microsoft.Devices/IotHubs",
+                "properties": {
+                  "iotHubNamespace": "khi-tests",
+                  "sharedAccessPolicyName": "iothubowner",
+                  "sharedAccessPolicyKey": "[listKeys(resourceId('Microsoft.Devices/IotHubs/IotHubKeys', 'khi-tests', 'iothubowner'),'2018-04-01').primaryKey]",
+                  "endpoint": "messages/events",
+                  "consumerGroupName": "$Default"
+                }
+              },
+              "compression": {
+                "type": "None"
+              },
+              "serialization": {
+                "type": "Json",
+                "properties": {
+                  "encoding": "UTF8"
+                }
+              },
+              "etag": "911e4f52-94b7-41bb-9dd7-585866645259"
+            }
+          },
+          {
+            "name": "processed-data-gaps",
+            "properties": {
+              "type": "Stream",
+              "datasource": {
+                "type": "Microsoft.ServiceBus/EventHub",
+                "properties": {
+                  "eventHubName": "processing-data-gaps",
+                  "serviceBusNamespace": "iiot-edge-relay-hub",
+                  "sharedAccessPolicyName": "StreamAnalyticsAccessKey",
+                  "sharedAccessPolicyKey": "[listKeys(resourceId('Microsoft.EventHub/namespaces/authorizationRules', 'iiot-edge-relay-hub', 'StreamAnalyticsAccessKey'),'2017-04-01').primaryKey]"
+                }
+              },
+              "compression": {
+                "type": "None"
+              },
+              "serialization": {
+                "type": "Json",
+                "properties": {
+                  "encoding": "UTF8"
+                }
+              },
+              "etag": "2acc6849-0032-4ab6-b800-7e1fdb01f881"
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "name": "data-windows-sql",
+            "properties": {
+              "datasource": {
+                "type": "Microsoft.Sql/Server/Database",
+                "properties": {
+                  "table": "DataWindows",
+                  "server": "iiot-edge-relay-sql.database.windows.net",
+                  "database": "IngressMetadata",
+                  "user": "[parameters('servers_iiot_edge_relay_sql_username')]",
+                  "password": "[parameters('servers_iiot_edge_relay_sql_password')]"
+                }
+              }
+            }
+          },
+          {
+            "name": "detected-data-gaps",
+            "properties": {
+              "datasource": {
+                "type": "Microsoft.ServiceBus/EventHub",
+                "properties": {
+                  "partitionKey": "BatchId",
+                  "eventHubName": "detected-data-gaps",
+                  "serviceBusNamespace": "iiot-edge-relay-hub",
+                  "sharedAccessPolicyName": "StreamAnalyticsAccessKey",
+                  "sharedAccessPolicyKey": "[listKeys(resourceId('Microsoft.EventHub/namespaces/authorizationRules', 'iiot-edge-relay-hub', 'StreamAnalyticsAccessKey'),'2017-04-01').primaryKey]"
+                }
+              },
+              "serialization": {
+                "type": "Json",
+                "properties": {
+                  "encoding": "UTF8",
+                  "format": "LineSeparated"
+                }
+              }
+            }
+          },
+          {
+            "name": "ingress-metadata",
+            "properties": {
+              "datasource": {
+                "type": "Microsoft.ServiceBus/EventHub",
+                "properties": {
+                  "partitionKey": "BatchId",
+                  "eventHubName": "ingress-metadata",
+                  "serviceBusNamespace": "iiot-edge-relay-hub",
+                  "sharedAccessPolicyName": "StreamAnalyticsAccessKey",
+                  "sharedAccessPolicyKey": "[listKeys(resourceId('Microsoft.EventHub/namespaces/authorizationRules', 'iiot-edge-relay-hub', 'StreamAnalyticsAccessKey'),'2017-04-01').primaryKey]"
+                }
+              },
+              "serialization": {
+                "type": "Json",
+                "properties": {
+                  "encoding": "UTF8",
+                  "format": "LineSeparated"
+                }
+              }
+            }
+          },
+          {
+            "name": "processing-data-gaps",
+            "properties": {
+              "datasource": {
+                "type": "Microsoft.ServiceBus/EventHub",
+                "properties": {
+                  "partitionKey": "BatchId",
+                  "eventHubName": "backfill-requests",
+                  "serviceBusNamespace": "iiot-edge-relay-hub",
+                  "sharedAccessPolicyName": "StreamAnalyticsAccessKey",
+                  "sharedAccessPolicyKey": "[listKeys(resourceId('Microsoft.EventHub/namespaces/authorizationRules', 'iiot-edge-relay-hub', 'StreamAnalyticsAccessKey'),'2017-04-01').primaryKey]"
+                }
+              },
+              "serialization": {
+                "type": "Json",
+                "properties": {
+                  "encoding": "UTF8",
+                  "format": "LineSeparated"
+                }
+              }
+            }
+          }
+        ],
+        "transformation": {
+          "name": "processing-query",
+          "properties": {
+            "query": "with\r\ndetection\r\nas\r\n(\r\n    select \r\n        *\r\n    from [iot-hub] partition by PartitionId\r\n    where StartWindow > LAG(EndWindow) OVER (PARTITION BY BatchId LIMIT DURATION(hour, 1))\r\n),\r\ndataWindows\r\nas\r\n(\r\n    select \r\n        *\r\n    from [iot-hub] partition by PartitionId\r\n    where StartWindow = LAG(EndWindow) OVER (PARTITION BY BatchId LIMIT DURATION(hour, 1))\r\n)\r\n\r\nSelect detection.BatchId, detection.StartWindow, detection.EndWindow\r\ninto [detected-data-gaps]\r\nfrom detection\r\n\r\nSelect dataWindows.BatchId, dataWindows.StartWindow, dataWindows.EndWindow\r\ninto [data-windows-sql]\r\nfrom dataWindows\r\n\r\nSelect *\r\ninto [ingress-metadata]\r\nfrom [iot-hub]",
+            "streamingUnits": 1
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2016-09-01",
+      "name": "[parameters('serverfarms_ASP_iiotedgerelay_9228_name')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic",
+        "size": "Y1",
+        "family": "Y",
+        "capacity": 0
+      },
+      "kind": "functionapp",
+      "properties": {
+        "name": "[parameters('serverfarms_ASP_iiotedgerelay_9228_name')]",
+        "perSiteScaling": false,
+        "reserved": false,
+        "targetWorkerCount": 0,
+        "targetWorkerSizeId": 0
+      }
+    },
+    {
+      "type": "microsoft.alertsmanagement/smartdetectoralertrules",
+      "apiVersion": "2019-06-01",
+      "name": "[parameters('smartdetectoralertrules_failure_anomalies___iiot_edge_relay_app_insights_name')]",
+      "location": "global",
+      "dependsOn": [
+        "[resourceId('microsoft.insights/components', parameters('components_iiot_edge_relay_app_insights_name'))]"
+      ],
+      "properties": {
+        "description": "Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.",
+        "state": "Enabled",
+        "severity": "Sev3",
+        "frequency": "PT1M",
+        "detector": {
+          "id": "FailureAnomaliesDetector"
+        },
+        "scope": [
+          "[resourceId('microsoft.insights/components', parameters('components_iiot_edge_relay_app_insights_name'))]"
+        ],
+        "actionGroups": {
+          "groupIds": [
+            "[parameters('actiongroups_application_20insights_20smart_20detection_externalid')]"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/AuthorizationRules",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/RootManageSharedAccessKey')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "rights": [
+          "Listen",
+          "Manage",
+          "Send"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/AuthorizationRules",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/StreamAnalyticsAccessKey')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "rights": [
+          "Listen",
+          "Send"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/backfill-requests')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "messageRetentionInDays": 1,
+        "partitionCount": 1,
+        "status": "Active"
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/detected-data-gaps')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "messageRetentionInDays": 1,
+        "partitionCount": 1,
+        "status": "Active"
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/ingress-metadata')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "messageRetentionInDays": 1,
+        "partitionCount": 1,
+        "status": "Active"
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/processing-data-gaps')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "messageRetentionInDays": 1,
+        "partitionCount": 1,
+        "status": "Active"
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/networkRuleSets",
+      "apiVersion": "2018-01-01-preview",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/default')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {
+        "defaultAction": "Deny",
+        "virtualNetworkRules": [],
+        "ipRules": []
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "cors": {
+          "corsRules": []
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2016-08-01",
+      "name": "[parameters('sites_iiot_edge_relay_function_name')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_iiotedgerelay_9228_name'))]"
+      ],
+      "kind": "functionapp",
+      "properties": {
+        "enabled": true,
+        "hostNameSslStates": [
+          {
+            "name": "[concat(parameters('sites_iiot_edge_relay_function_name'), '.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+          },
+          {
+            "name": "[concat(parameters('sites_iiot_edge_relay_function_name'), '.scm.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Repository"
+          }
+        ],
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_iiotedgerelay_9228_name'))]",
+        "reserved": false,
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": true,
+        "clientCertEnabled": false,
+        "hostNamesDisabled": false,
+        "containerSize": 1536,
+        "dailyMemoryTimeQuota": 0,
+        "httpsOnly": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2016-08-01",
+      "name": "[concat(parameters('sites_iiot_edge_relay_function_name'), '/web')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_iiot_edge_relay_function_name'))]"
+      ],
+      "properties": {
+        "numberOfWorkers": 1,
+        "defaultDocuments": [
+          "Default.htm",
+          "Default.html",
+          "Default.asp",
+          "index.htm",
+          "index.html",
+          "iisstart.htm",
+          "default.aspx",
+          "index.php"
+        ],
+        "netFrameworkVersion": "v4.0",
+        "phpVersion": "5.6",
+        "pythonVersion": "",
+        "nodeVersion": "",
+        "linuxFxVersion": "",
+        "requestTracingEnabled": false,
+        "remoteDebuggingEnabled": false,
+        "httpLoggingEnabled": false,
+        "logsDirectorySizeLimit": 35,
+        "detailedErrorLoggingEnabled": false,
+        "publishingUsername": "$iiot-edge-relay-function",
+        "scmType": "None",
+        "use32BitWorkerProcess": true,
+        "webSocketsEnabled": false,
+        "alwaysOn": false,
+        "appCommandLine": "",
+        "managedPipelineMode": "Integrated",
+        "virtualApplications": [
+          {
+            "virtualPath": "/",
+            "physicalPath": "site\\wwwroot",
+            "preloadEnabled": false,
+            "virtualDirectories": null
+          }
+        ],
+        "winAuthAdminState": 0,
+        "winAuthTenantState": 0,
+        "customAppPoolIdentityAdminState": false,
+        "customAppPoolIdentityTenantState": false,
+        "loadBalancing": "LeastRequests",
+        "routingRules": [],
+        "experiments": {
+          "rampUpRules": []
+        },
+        "autoHealEnabled": false,
+        "vnetName": "",
+        "siteAuthEnabled": false,
+        "siteAuthSettings": {
+          "enabled": null,
+          "unauthenticatedClientAction": null,
+          "tokenStoreEnabled": null,
+          "allowedExternalRedirectUrls": null,
+          "defaultProvider": null,
+          "clientId": null,
+          "clientSecret": null,
+          "clientSecretCertificateThumbprint": null,
+          "issuer": null,
+          "allowedAudiences": null,
+          "additionalLoginParams": null,
+          "isAadAutoProvisioned": false,
+          "googleClientId": null,
+          "googleClientSecret": null,
+          "googleOAuthScopes": null,
+          "facebookAppId": null,
+          "facebookAppSecret": null,
+          "facebookOAuthScopes": null,
+          "twitterConsumerKey": null,
+          "twitterConsumerSecret": null,
+          "microsoftAccountClientId": null,
+          "microsoftAccountClientSecret": null,
+          "microsoftAccountOAuthScopes": null
+        },
+        "cors": {
+          "allowedOrigins": [
+            "https://functions.azure.com",
+            "https://functions-staging.azure.com",
+            "https://functions-next.azure.com"
+          ],
+          "supportCredentials": false
+        },
+        "localMySqlEnabled": false,
+        "http20Enabled": false,
+        "minTlsVersion": "1.2",
+        "ftpsState": "AllAllowed",
+        "reservedInstanceCount": 0,
+        "fileChangeAuditEnabled": false,
+        "functionsRuntimeScaleMonitoringEnabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/hostNameBindings",
+      "apiVersion": "2016-08-01",
+      "name": "[concat(parameters('sites_iiot_edge_relay_function_name'), '/', parameters('sites_iiot_edge_relay_function_name'), '.azurewebsites.net')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_iiot_edge_relay_function_name'))]"
+      ],
+      "properties": {
+        "siteName": "iiot-edge-relay-function",
+        "hostNameType": "Verified"
+      }
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/backfill-requests/$Default')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'backfill-requests')]",
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/detected-data-gaps/$Default')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'detected-data-gaps')]",
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/ingress-metadata/$Default')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'ingress-metadata')]",
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
+      "apiVersion": "2017-04-01",
+      "name": "[concat(parameters('namespaces_iiot_edge_relay_hub_name'), '/processing-data-gaps/$Default')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaces_iiot_edge_relay_hub_name'), 'processing-data-gaps')]",
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaces_iiot_edge_relay_hub_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default/vulnerability-assessments')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_iiotedgerelaystorage_name'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default/azure-webjobs-eventhub')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_iiotedgerelaystorage_name'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default/azure-webjobs-hosts')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_iiotedgerelaystorage_name'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default/azure-webjobs-secrets')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_iiotedgerelaystorage_name'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('storageAccounts_iiotedgerelaystorage_name'), '/default/edge-vm')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_iiotedgerelaystorage_name'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_iiotedgerelaystorage_name'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    }
+  ]
+}

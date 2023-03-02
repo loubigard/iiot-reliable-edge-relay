@@ -1,14 +1,19 @@
 namespace ReliableRelayModule
 {
+    using InfluxDB.Client;
+    using InfluxDB.Client.Linq;
+    using Microsoft.Azure.Devices.Client;
+    using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+    using Newtonsoft.Json;
     using System;
+    using System.Linq;
     using System.Net;
     using System.Runtime.Loader;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Devices.Client;
-    using Microsoft.Azure.Devices.Client.Transport.Mqtt;
-    using Newtonsoft.Json;
+    using Azure.Samples.ReliableEdgeRelay.Models;
+    using TransportType = Microsoft.Azure.Devices.Client.TransportType;
 
 
 
@@ -32,6 +37,10 @@ namespace ReliableRelayModule
         static int counter;
         static int _skipNextMessage = 0;
         static DateTime _dataStartWindow = DateTime.Now;
+        static string _token;
+        static string _bucket;
+        static string _organization;
+        static string _url;
 
         static void Main(string[] args)
         {
@@ -77,6 +86,11 @@ namespace ReliableRelayModule
             await ioTHubModuleClient.SetMethodHandlerAsync("SkipMessageMethod", SkipMessageMethodHandler, ioTHubModuleClient);
 
             await ioTHubModuleClient.SetMethodDefaultHandlerAsync(DefaultMethodHandler, ioTHubModuleClient);
+
+            _token = Environment.GetEnvironmentVariable("INFLUXDB_TOKEN");
+            _bucket = Environment.GetEnvironmentVariable("INFLUXDB_BUCKET");
+            _organization = Environment.GetEnvironmentVariable("INFLUXDB_ORGANIZATION");
+            _url = Environment.GetEnvironmentVariable("INFLUXDB_URL");
         }
 
         /// <summary>
@@ -135,19 +149,33 @@ namespace ReliableRelayModule
 
             Console.WriteLine($"Backfill method invocation received. batchId={request.BatchId}. Start={request.StartWindow}. End={request.EndWindow}");
 
-            var message = new Message(Encoding.UTF8.GetBytes($"{{\"backfilled\": \"{request.BatchId}\"}}"))
+            var client = new InfluxDBClient(_url, _token);
+            var queryApi = client.GetQueryApiSync();
+
+            var query = (from s in InfluxDBQueryable<OpcUaTelemetry>.Queryable(_bucket, _organization, queryApi)
+                         where s.BatchId == request.BatchId
+                         where s.StartWindow == request.EndWindow.ToUniversalTime().ToString("o")
+                         select s)
+                        .Take(1);
+
+
+            var telemetries = query.ToList();
+            OpcUaTelemetry telemetry = telemetries[0];
+
+            var message = new Message(Encoding.UTF8.GetBytes(telemetry.Telemetry))
             {
                 ContentType = "application/json",
                 ContentEncoding = "UTF-8"
             };
-            message.Properties.Add("batchId", request.BatchId);
+            message.Properties.Add("BatchId", telemetry.BatchId);
             message.Properties.Add("isBackfill", "true");
-            message.Properties.Add("dataWindowStart", request.StartWindow.ToUniversalTime().ToString("o"));
-            message.Properties.Add("dataWindowEnd", request.EndWindow.ToUniversalTime().ToString("o"));
+            message.Properties.Add("StartWindow", telemetry.StartWindow);
+            message.Properties.Add("EndWindow", telemetry.EndWindow);
 
             try
             {
                 await moduleClient.SendEventAsync("output1", message);
+                Console.WriteLine($"Sending Backfilled telemetry. batchId={telemetry.BatchId}. Start={telemetry.StartWindow}. End={telemetry.EndWindow} Telemetry={telemetry.Telemetry}");
                 Console.WriteLine("Message sent successfully to Edge Hub");
 
                 return new MethodResponse(
